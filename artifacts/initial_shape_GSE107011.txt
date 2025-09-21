@@ -1,0 +1,8 @@
+dataset: GSE107011
+n_genes: 58311
+n_samples: 127
+missing_values: 0
+duplicate_genes: 0
+min_expression: 0.0
+max_expression: 80639.8
+mean_expression: 17.149422977900127

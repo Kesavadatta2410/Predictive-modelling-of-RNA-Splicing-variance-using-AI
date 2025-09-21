@@ -1,0 +1,10 @@
+{
+  "total_samples": 127,
+  "features": 5000,
+  "classes": {
+    "0": 64,
+    "1": 63
+  },
+  "random_state": 42,
+  "strategy": "stratified_random"
+}

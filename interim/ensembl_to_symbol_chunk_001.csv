@@ -1,0 +1,4 @@
+ensembl_gene_id,external_gene_name,gene_biotype,chromosome_name,start_position,end_position,strand
+ENSG00000143344,RGL1,protein_coding,1,183636085,183928532,1
+ENSG00000162704,ARPC5,protein_coding,1,183620846,183635783,-1
+ENSG00000173627,APOBEC4,protein_coding,1,183646275,183653316,-1

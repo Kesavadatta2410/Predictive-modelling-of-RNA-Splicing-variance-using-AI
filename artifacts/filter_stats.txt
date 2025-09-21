@@ -1,0 +1,8 @@
+threshold_used: 1.0
+min_samples_required: 12
+min_samples_pct: 0.1
+genes_initial: 58311
+genes_retained: 28447
+genes_removed: 29864
+retention_rate_pct: 48.78496338598206
+log_transformed: False
