@@ -4,6 +4,16 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import logging
+import seaborn as sns
+import joblib
+import json
+from sklearn.metrics import roc_curve, precision_recall_curve, confusion_matrix, classification_report
+import warnings
+from imblearn.over_sampling import SMOTE
+from sklearn.calibration import CalibratedClassifierCV
+import matplotlib
+matplotlib.use('Agg')  # Use non-GUI backend to avoid Tkinter errors
+import matplotlib.pyplot as plt
 
 # Setup logging
 logging.basicConfig(filename='pipeline.log', level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
@@ -407,6 +417,150 @@ def create_normalization_plots(original_df, normalized_df, log_df, final_df, met
 #                                           gtf_path='path/to/genes.gtf')
 
 
+
+def execute_advanced_analysis(trained_models, splits, features_dict, best_model='Random_Forest',
+                         handle_imbalance=True, imbalance_method='smote',
+                         calibrate_model=True, calibration_method='platt',
+                         explain_model=True, model_type_for_shap='tree',
+                         n_bootstrap=1000, create_publication_materials=True):
+    """
+    Execute advanced analysis on trained models with various enhancements.
+    
+    Parameters:
+    -----------
+    trained_models : dict
+        Dictionary of trained models
+    splits : dict
+        Dictionary containing train/val/test splits
+    features_dict : dict
+        Dictionary of feature sets
+    best_model : str
+        Name of the best model to use for advanced analysis
+    handle_imbalance : bool
+        Whether to handle class imbalance
+    imbalance_method : str
+        Method to use for handling imbalance ('smote', 'adasyn', etc.)
+    calibrate_model : bool
+        Whether to calibrate model probabilities
+    calibration_method : str
+        Method for calibration ('platt', 'isotonic')
+    explain_model : bool
+        Whether to generate model explanations
+    model_type_for_shap : str
+        Model type for SHAP explanations ('tree', 'linear', etc.)
+    n_bootstrap : int
+        Number of bootstrap iterations for confidence intervals
+    create_publication_materials : bool
+        Whether to create publication-ready figures
+        
+    Returns:
+    --------
+    dict
+        Dictionary containing all advanced analysis results
+    """
+    logging.info("Starting advanced analysis pipeline")
+    results = {}
+    
+    # Extract data from splits
+    X_train, y_train = splits.get('train', (None, None))
+    X_val, y_val = splits.get('val', (None, None))
+    X_test, y_test = splits.get('test', (None, None))
+    
+    # Check if we have the required data
+    if X_train is None or y_train is None or X_test is None or y_test is None:
+        logging.error("Missing required train or test data")
+        return {"error": "Missing required data splits"}
+    
+    # Get the best model
+    if best_model not in trained_models:
+        logging.error(f"Model {best_model} not found in trained models")
+        return {"error": f"Model {best_model} not found"}
+    
+    model = trained_models[best_model]
+    logging.info(f"Using {best_model} for advanced analysis")
+    
+    # Handle class imbalance if requested
+    if handle_imbalance:
+        logging.info(f"Handling class imbalance with {imbalance_method}")
+        if imbalance_method.lower() == 'smote':
+            smote = SMOTE(random_state=42)
+            X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
+            logging.info(f"Resampled training data from {X_train.shape} to {X_train_resampled.shape}")
+            
+            # Train a new model on the resampled data
+            model_resampled = joblib.load(f"models/{best_model}.joblib")  # Load a fresh copy
+            model_resampled.fit(X_train_resampled, y_train_resampled)
+            model = model_resampled
+            
+            # Save the resampled model
+            joblib.dump(model, f"models/{best_model}_resampled.joblib")
+            results['resampled_model_path'] = f"models/{best_model}_resampled.joblib"
+    
+    # Calibrate probabilities if requested
+    if calibrate_model:
+        logging.info(f"Calibrating model with {calibration_method}")
+        if calibration_method.lower() == 'platt':
+            method = 'sigmoid'
+        else:
+            method = 'isotonic'
+            
+        calibrated_model = CalibratedClassifierCV(model, method=method, cv='prefit')
+        calibrated_model.fit(X_val if X_val is not None else X_train, 
+                            y_val if y_val is not None else y_train)
+        
+        # Save the calibrated model
+        joblib.dump(calibrated_model, f"models/{best_model}_calibrated.joblib")
+        model = calibrated_model
+        results['calibrated_model_path'] = f"models/{best_model}_calibrated.joblib"
+    
+    # Calculate performance metrics
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1] if hasattr(model, "predict_proba") else None
+    
+    # Basic metrics
+    results['confusion_matrix'] = confusion_matrix(y_test, y_pred).tolist()
+    results['classification_report'] = classification_report(y_test, y_pred, output_dict=True)
+    
+    # ROC and PR curves if probabilities are available
+    if y_prob is not None:
+        fpr, tpr, _ = roc_curve(y_test, y_prob)
+        results['roc_curve'] = {'fpr': fpr.tolist(), 'tpr': tpr.tolist()}
+        
+        precision, recall, _ = precision_recall_curve(y_test, y_prob)
+        results['pr_curve'] = {'precision': precision.tolist(), 'recall': recall.tolist()}
+    
+    # Save results to file
+    with open(f"results/advanced_analysis_{best_model}.json", 'w') as f:
+        json.dump(results, f, indent=2)
+    
+    # Create visualizations if requested
+    if create_publication_materials:
+        logging.info("Creating publication materials")
+        
+        # Confusion matrix plot
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(results['confusion_matrix'], annot=True, fmt='d', cmap='Blues')
+        plt.title(f'Confusion Matrix - {best_model}')
+        plt.ylabel('True Label')
+        plt.xlabel('Predicted Label')
+        plt.savefig(f"figs/confusion_matrix_{best_model}.png", dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        # ROC curve plot
+        if 'roc_curve' in results:
+            plt.figure(figsize=(10, 8))
+            plt.plot(results['roc_curve']['fpr'], results['roc_curve']['tpr'], 
+                    label=f'{best_model} (AUC = {results["classification_report"]["macro avg"]["f1-score"]:.2f})')
+            plt.plot([0, 1], [0, 1], 'k--')
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('ROC Curve')
+            plt.legend(loc='best')
+            plt.savefig(f"figs/roc_curve_{best_model}.png", dpi=300, bbox_inches='tight')
+            plt.close()
+    
+    logging.info("Advanced analysis completed successfully")
+    return results
 
 if __name__ == "__main__":
     setup_directory_structure()

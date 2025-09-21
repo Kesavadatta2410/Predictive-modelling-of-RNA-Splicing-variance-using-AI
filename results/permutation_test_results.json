@@ -1,0 +1,11 @@
+{
+  "original_score": 0.15,
+  "permutation_scores_mean": 0.4932,
+  "permutation_scores_std": 0.18378998884596517,
+  "p_value": 0.989010989010989,
+  "cohens_d": -1.8673487177130024,
+  "significance": "Not statistically significant (p >= 0.05)",
+  "n_permutations": 1000,
+  "scoring_metric": "roc_auc",
+  "is_significant": 0
+}
