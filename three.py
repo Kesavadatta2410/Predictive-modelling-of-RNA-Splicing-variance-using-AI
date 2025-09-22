@@ -46,7 +46,12 @@ except ImportError:
     print("Warning: PyTorch not available. Some deep learning features disabled.")
     TORCH_AVAILABLE = False
 
-import shap
+try:
+    import shap
+    SHAP_AVAILABLE = True
+except ImportError:
+    print("Warning: SHAP not available. Install with: pip install shap")
+    SHAP_AVAILABLE = False
 
 import gseapy as gp
 GSEAPY_AVAILABLE = True

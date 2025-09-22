@@ -567,8 +567,10 @@ if __name__ == "__main__":
     
     file_paths = [
         'data/GSE107011_Processed_data_TPM.txt',
-        'data/GSE122459_tpm.txt'
-        # Add full list of data files
+        'data/GSE122459_tpm.txt',
+        'data/GSE122459_ann.txt',
+        'data/GSE122459_cnt.txt',
+        'data/GSE107011_tpm.txt'
     ]
     sources = ['Gene Expression Omnibus', 'Zenodo']
     dates = ['2024-05-01', '2024-05-02']  # Replace with actual download dates
