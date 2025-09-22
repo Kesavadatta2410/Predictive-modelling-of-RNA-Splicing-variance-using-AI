@@ -46,21 +46,10 @@ except ImportError:
     print("Warning: PyTorch not available. Some deep learning features disabled.")
     TORCH_AVAILABLE = False
 
-# Explainability
-try:
-    import shap
-    SHAP_AVAILABLE = True
-except ImportError:
-    print("Warning: SHAP not available. Install with: pip install shap")
-    SHAP_AVAILABLE = False
+import shap
 
-# Pathway analysis
-try:
-    import gseapy as gp
-    GSEAPY_AVAILABLE = True
-except ImportError:
-    print("Warning: GSEApy not available. Install with: pip install gseapy")
-    GSEAPY_AVAILABLE = False
+import gseapy as gp
+GSEAPY_AVAILABLE = True
 
 # Create all necessary directories
 directories = ['results', 'figs', 'models', 'reports']
@@ -71,9 +60,6 @@ for directory in directories:
 plt.style.use('seaborn-v0_8')
 sns.set_palette("husl")
 
-# ============================================================================
-# UTILITY FUNCTIONS
-# ============================================================================
 
 def load_data_safely(file_path, description="data"):
     """Safely load data files with error handling"""
@@ -1953,6 +1939,16 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
     print(f"   🧬 Pathways Found: {len(pathway_results) if pathway_results is not None else 0}")
 
     print(f"\n🚀 Ready for publication and further analysis!")
+        # After you generate y_pred and y_proba_calibrated for X_test
+    sample_table = pd.DataFrame({
+        'Sample_ID': X_test.index,
+        'True_Label': y_test.values,
+        'Predicted_Label': y_pred,
+        'Probability_Disease': y_proba_calibrated
+    })
+    sample_table.to_csv('results/test_predictions_table.csv', index=False)
+    print("✅ Saved cell-level predictions table to results/test_predictions_table.csv")
+
     
     return results_dict
 
