@@ -1,0 +1,9 @@
+{
+  "n_genes": 58311,
+  "n_samples": 127,
+  "data_type": "raw counts",
+  "value_range": [
+    0.0,
+    80639.8
+  ]
+}

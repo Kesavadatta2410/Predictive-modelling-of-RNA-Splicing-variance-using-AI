@@ -52,7 +52,8 @@ try:
 except ImportError:
     print("Warning: SHAP not available. Install with: pip install shap")
     SHAP_AVAILABLE = False
-
+import one
+import two
 import gseapy as gp
 GSEAPY_AVAILABLE = True
 
@@ -71,14 +72,14 @@ def load_data_safely(file_path, description="data"):
     try:
         if file_path.endswith('.csv'):
             data = pd.read_csv(file_path, index_col=0)
-            print(f"✅ Successfully loaded {description} from {file_path}")
+            print(f" Successfully loaded {description} from {file_path}")
             return data
         elif file_path.endswith('.pkl'):
             data = joblib.load(file_path)
-            print(f"✅ Successfully loaded {description} from {file_path}")
+            print(f" Successfully loaded {description} from {file_path}")
             return data
     except Exception as e:
-        print(f"❌ Failed to load {description} from {file_path}: {e}")
+        print(f"Failed to load {description} from {file_path}: {e}")
         return None
 
 def save_results_safely(data, file_path, description="results"):
@@ -91,15 +92,13 @@ def save_results_safely(data, file_path, description="results"):
             data.to_csv(file_path, index=True)
         else:
             joblib.dump(data, file_path)
-        print(f"✅ Successfully saved {description} to {file_path}")
+        print(f"Successfully saved {description} to {file_path}")
         return True
     except Exception as e:
-        print(f"❌ Failed to save {description} to {file_path}: {e}")
+        print(f"Failed to save {description} to {file_path}: {e}")
         return False
 
-# ============================================================================
 # STEP 13: ENHANCED CLASS IMBALANCE ANALYSIS
-# ============================================================================
 
 def analyze_class_imbalance(y_train, y_val, y_test):
     """Comprehensive class distribution and imbalance analysis"""
@@ -142,9 +141,9 @@ def analyze_class_imbalance(y_train, y_val, y_test):
         print(f"  Imbalance ratio: {imbalance_ratio:.2f}:1")
         
         if imbalance_ratio > 2.0:
-            print(f"  ⚠️  Significant imbalance detected!")
+            print(f"Significant imbalance detected!")
         else:
-            print(f"  ✅ Relatively balanced")
+            print(f"  Relatively balanced")
     
     # Create imbalance visualization
     create_imbalance_plots(imbalance_stats)
@@ -221,11 +220,9 @@ def create_imbalance_plots(imbalance_stats):
     plt.tight_layout()
     plt.savefig('figs/class_imbalance_analysis.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("✅ Class imbalance plots saved to figs/class_imbalance_analysis.png")
+    print(" Class imbalance plots saved to figs/class_imbalance_analysis.png")
 
-# ============================================================================
 # STEP 14: ENHANCED MODEL CALIBRATION
-# ============================================================================
 
 def calibrate_model_probabilities(model, X_val, y_val, method='sigmoid'):
     """Advanced model probability calibration"""
@@ -245,7 +242,7 @@ def calibrate_model_probabilities(model, X_val, y_val, method='sigmoid'):
     # Fit calibration on validation set
     calibrated_model.fit(X_val, y_val)
     
-    print(f"✅ Model calibrated using {method}")
+    print(f" Model calibrated using {method}")
     
     return calibrated_model
 
@@ -396,11 +393,9 @@ Model Assessment:
     plt.tight_layout()
     plt.savefig('figs/calibration_analysis.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("✅ Calibration plots saved to figs/calibration_analysis.png")
+    print("Calibration plots saved to figs/calibration_analysis.png")
 
-# ============================================================================
 # STEP 15: COMPREHENSIVE STATISTICAL VALIDATION
-# ============================================================================
 
 def bootstrap_confidence_intervals(y_true, y_pred, y_proba, n_bootstrap=1000, 
                                  confidence_level=0.95, random_state=42):
@@ -523,16 +518,16 @@ def permutation_test_significance(model, X, y, scoring='roc_auc', n_permutations
     # Significance assessment
     if pvalue < 0.001:
         significance = "Highly significant (p < 0.001)"
-        print(f"  🎯 {significance}")
+        print(f"  {significance}")
     elif pvalue < 0.01:
         significance = "Very significant (p < 0.01)"
-        print(f"  ✅ {significance}")
+        print(f" {significance}")
     elif pvalue < 0.05:
         significance = "Statistically significant (p < 0.05)"
-        print(f"  ✅ {significance}")
+        print(f" {significance}")
     else:
         significance = "Not statistically significant (p >= 0.05)"
-        print(f"  ⚠️ {significance}")
+        print(f" {significance}")
     
     # Effect size (Cohen's d)
     pooled_std = np.sqrt(((len(permutation_scores)-1)*np.var(permutation_scores, ddof=1) + 0) / 
@@ -634,7 +629,7 @@ def create_statistical_validation_plots(ci_results, permutation_scores, original
     # Plot 5: Statistical significance summary
     axes[2, 0].axis('off')
     
-    significance_status = "✅ Significant" if pvalue < 0.05 else "⚠️ Not Significant"
+    significance_status = " Significant" if pvalue < 0.05 else "⚠️ Not Significant"
     effect_size_interpretation = "Large" if abs((original_score - np.mean(permutation_scores))/np.std(permutation_scores)) > 0.8 else "Medium" if abs((original_score - np.mean(permutation_scores))/np.std(permutation_scores)) > 0.5 else "Small"
     
     summary_text = f"""Statistical Validation Summary
@@ -697,11 +692,9 @@ Interpretation Guidelines:
     plt.tight_layout()
     plt.savefig('figs/statistical_validation.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("✅ Statistical validation plots saved to figs/statistical_validation.png")
+    print(" Statistical validation plots saved to figs/statistical_validation.png")
 
-# ============================================================================
 # STEP 16: ENHANCED EXPLAINABILITY & BIOLOGICAL MAPPING
-# ============================================================================
 
 def compute_shap_explanations(model, X_train, X_test, feature_names=None, 
                              model_type='sklearn', max_samples=100, max_features=500, scaler=None):
@@ -712,7 +705,7 @@ def compute_shap_explanations(model, X_train, X_test, feature_names=None,
     print(f"{'='*60}")
     
     if not SHAP_AVAILABLE:
-        print("❌ SHAP not available. Skipping explainability analysis.")
+        print(" SHAP not available. Skipping explainability analysis.")
         return None
 
     print(f"Model type: {model_type}")
@@ -756,7 +749,7 @@ def compute_shap_explanations(model, X_train, X_test, feature_names=None,
         print("Attempting TreeExplainer...")
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(X_test_sample)
-        print("✅ TreeExplainer successful")
+        print(" TreeExplainer successful")
         
     except Exception as e:
         print(f"TreeExplainer failed: {e}")
@@ -766,7 +759,7 @@ def compute_shap_explanations(model, X_train, X_test, feature_names=None,
             background = shap.sample(X_train_scaled, min(100, X_train_scaled.shape[0]))
             explainer = shap.KernelExplainer(model.predict_proba, background)
             shap_values = explainer.shap_values(X_test_sample, nsamples=100)
-            print("✅ KernelExplainer successful")
+            print(" KernelExplainer successful")
             
         except Exception as e2:
             print(f"KernelExplainer failed: {e2}")
@@ -775,7 +768,7 @@ def compute_shap_explanations(model, X_train, X_test, feature_names=None,
                 print("Attempting LinearExplainer...")
                 explainer = shap.LinearExplainer(model, X_train_scaled)
                 shap_values = explainer.shap_values(X_test_sample)
-                print("✅ LinearExplainer successful")
+                print(" LinearExplainer successful")
                 
             except Exception as e3:
                 print(f"All SHAP explainers failed: {e3}")
@@ -815,7 +808,7 @@ def compute_shap_explanations(model, X_train, X_test, feature_names=None,
     # Create SHAP visualization
     create_shap_plots(shap_results, X_test_sample, feature_names)
     
-    print("✅ SHAP analysis completed")
+    print(" SHAP analysis completed")
     return shap_results
 
 def create_shap_plots(shap_results, X_test_sample, feature_names):
@@ -913,7 +906,7 @@ Interpretation:
     plt.tight_layout()
     plt.savefig('figs/shap_explainability_analysis.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("✅ SHAP plots saved to figs/shap_explainability_analysis.png")
+    print(" SHAP plots saved to figs/shap_explainability_analysis.png")
 
 def perform_pathway_enrichment_analysis(top_genes, organism='human', 
                                        gene_set_database='GO_Biological_Process_2023',
@@ -921,7 +914,7 @@ def perform_pathway_enrichment_analysis(top_genes, organism='human',
     """Advanced pathway enrichment analysis"""
     
     if not GSEAPY_AVAILABLE:
-        print("❌ GSEApy not available. Skipping pathway analysis.")
+        print(" GSEApy not available. Skipping pathway analysis.")
         return None
     
     print(f"\n=== PATHWAY ENRICHMENT ANALYSIS ===")
@@ -958,7 +951,7 @@ def perform_pathway_enrichment_analysis(top_genes, organism='human',
             significant_pathways = results_df[results_df['Adjusted P-value'] < cutoff]
             
             if len(significant_pathways) > 0:
-                print(f"✅ Significant pathways (FDR < {cutoff}): {len(significant_pathways)}")
+                print(f" Significant pathways (FDR < {cutoff}): {len(significant_pathways)}")
                 
                 # Sort by adjusted p-value
                 significant_pathways = significant_pathways.sort_values('Adjusted P-value')
@@ -975,17 +968,17 @@ def perform_pathway_enrichment_analysis(top_genes, organism='human',
                 # Create pathway visualization
                 create_pathway_plots(significant_pathways)
                 
-                print("✅ Pathway analysis completed")
+                print(" Pathway analysis completed")
                 return significant_pathways
             else:
-                print("⚠️ No significant pathways found")
+                print(" No significant pathways found")
                 return None
         else:
-            print("⚠️ No pathways found")
+            print(" No pathways found")
             return None
             
     except Exception as e:
-        print(f"❌ Error in pathway analysis: {e}")
+        print(f" Error in pathway analysis: {e}")
         return None
 
 def create_pathway_plots(pathway_results):
@@ -1087,7 +1080,7 @@ Interpretation:
     plt.tight_layout()
     plt.savefig('figs/pathway_enrichment_analysis.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("✅ Pathway plots saved to figs/pathway_enrichment_analysis.png")
+    print(" Pathway plots saved to figs/pathway_enrichment_analysis.png")
 
 # ============================================================================
 # COMPREHENSIVE RESULTS FIGURE
@@ -1251,7 +1244,7 @@ AUC: [{stat_summary.get('auc_ci_lower', 0):.3f}, {stat_summary.get('auc_ci_upper
 
 Permutation Test:
 P-value: {stat_summary.get('permutation_pvalue', 'N/A'):.6f}
-Significant: {'✅ Yes' if stat_summary.get('is_significant', False) else '❌ No'}
+Significant: {' Yes' if stat_summary.get('is_significant', False) else '❌ No'}
 
 Calibration:
 Brier Score: {stat_summary.get('brier_score', 'N/A'):.4f}
@@ -1282,13 +1275,13 @@ Quality: {'Good' if stat_summary.get('brier_score', 1) < 0.2 else 'Poor'}
     
     analysis_text = f"""Analysis Pipeline
 
-✅ Data Loading & Preprocessing
-✅ Class Imbalance Analysis  
-✅ Model Calibration
-✅ Statistical Validation
-✅ Explainability (SHAP)
-✅ Pathway Enrichment
-✅ Comprehensive Reporting
+ Data Loading & Preprocessing
+ Class Imbalance Analysis  
+ Model Calibration
+ Statistical Validation
+ Explainability (SHAP)
+ Pathway Enrichment
+ Comprehensive Reporting
 
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
@@ -1310,12 +1303,9 @@ Pathways Found: {len(pathway_results) if pathway_results is not None else 0}
     plt.savefig('figs/comprehensive_results_figure.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print("✅ Comprehensive results figure saved to figs/comprehensive_results_figure.png")
+    print(" Comprehensive results figure saved to figs/comprehensive_results_figure.png")
 
-# ============================================================================
 # ENHANCED FINAL SUMMARY REPORT
-# ============================================================================
-
 def create_final_summary_report(results_dict):
     """Create comprehensive final summary report in markdown format"""
     
@@ -1334,11 +1324,11 @@ def create_final_summary_report(results_dict):
 
 ---
 
-## 📊 Executive Summary
+##  Executive Summary
 
 This report presents a comprehensive gene expression classification analysis designed to distinguish between biological conditions using advanced machine learning techniques. The analysis includes rigorous statistical validation, explainability analysis, and biological interpretation.
 
-### 🎯 Key Results at a Glance
+###  Key Results at a Glance
 
 | Metric | Value | 95% CI | Interpretation |
 |--------|-------|--------|----------------|
@@ -1349,7 +1339,7 @@ This report presents a comprehensive gene expression classification analysis des
 
 ---
 
-## 🔬 Methodology
+##  Methodology
 
 ### Data Processing Pipeline
 1. **Quality Control**: Comprehensive data validation and cleaning
@@ -1364,14 +1354,14 @@ This report presents a comprehensive gene expression classification analysis des
 - **Test Samples**: {model_summary.get('n_test', 'N/A'):,}
 
 ### Advanced Analysis Components
-- **📈 Statistical Validation**: Bootstrap confidence intervals + permutation testing
-- **🔍 Model Explainability**: SHAP feature importance analysis
-- **🧬 Biological Interpretation**: Pathway enrichment analysis
-- **⚖️ Model Calibration**: Probability calibration for reliable risk scores
+- ** Statistical Validation**: Bootstrap confidence intervals + permutation testing
+- ** Model Explainability**: SHAP feature importance analysis
+- ** Biological Interpretation**: Pathway enrichment analysis
+- ** Model Calibration**: Probability calibration for reliable risk scores
 
 ---
 
-## 📈 Detailed Results
+##  Detailed Results
 
 ### Statistical Validation Results
 
@@ -1409,7 +1399,7 @@ This report presents a comprehensive gene expression classification analysis des
         top_features = results_dict['feature_importance'].head(10)
         report_content += """
 
-### 🔍 Feature Importance Analysis
+###  Feature Importance Analysis
 
 #### Top 10 Most Predictive Features (SHAP)
 
@@ -1425,7 +1415,7 @@ This report presents a comprehensive gene expression classification analysis des
     if pathway_results is not None and len(pathway_results) > 0:
         report_content += f"""
 
-### 🧬 Biological Pathway Analysis
+###  Biological Pathway Analysis
 
 #### Pathway Enrichment Summary
 - **Total Significant Pathways**: {len(pathway_results):,}
@@ -1448,7 +1438,7 @@ This report presents a comprehensive gene expression classification analysis des
 
 ---
 
-## 🏆 Key Findings
+##  Key Findings
 
 """
         for i, finding in enumerate(key_findings, 1):
@@ -1459,7 +1449,7 @@ This report presents a comprehensive gene expression classification analysis des
 
 ---
 
-## 🎓 Interpretation & Clinical Relevance
+##  Interpretation & Clinical Relevance
 
 ### Model Performance Assessment
 The developed classifier achieved an AUC of **{model_summary.get('test_auc', 0):.3f}**, indicating {'**excellent discriminative ability**' if model_summary.get('test_auc', 0) > 0.9 else '**good discriminative ability**' if model_summary.get('test_auc', 0) > 0.8 else '**moderate discriminative ability**'} between biological conditions. The statistical validation confirms that this performance is {'**statistically significant**' if stat_summary.get('is_significant', False) else '**not statistically significant**'} (p = {stat_summary.get('permutation_pvalue', 'N/A'):.6f}).
@@ -1476,7 +1466,7 @@ The developed classifier achieved an AUC of **{model_summary.get('test_auc', 0):
 
 ---
 
-## ⚠️ Limitations & Future Directions
+##  Limitations & Future Directions
 
 ### Current Limitations
 1. **Sample Size**: Analysis limited to available dataset size
@@ -1492,7 +1482,7 @@ The developed classifier achieved an AUC of **{model_summary.get('test_auc', 0):
 
 ---
 
-## 📊 Generated Files & Outputs
+##  Generated Files & Outputs
 
 ### Statistical Results
 - `calibration_metrics.json` - Model probability calibration assessment
@@ -1514,7 +1504,7 @@ The developed classifier achieved an AUC of **{model_summary.get('test_auc', 0):
 
 ---
 
-## 🔬 Technical Specifications
+##  Technical Specifications
 
 ### Software Environment
 - **Python Version**: 3.8+
@@ -1535,7 +1525,7 @@ The developed classifier achieved an AUC of **{model_summary.get('test_auc', 0):
 
 ---
 
-## 📞 Contact & Support
+##  Contact & Support
 
 This analysis was generated using the Advanced Gene Expression Classification Pipeline v4.0.
 
@@ -1554,7 +1544,7 @@ This analysis was generated using the Advanced Gene Expression Classification Pi
     with open('results/final_summary_report.md', 'w', encoding='utf-8') as f:
         f.write(report_content)
     
-    print("✅ Final comprehensive report saved to results/final_summary_report.md")
+    print(" Final comprehensive report saved to results/final_summary_report.md")
     
     # Also create a PDF version if possible
     try:
@@ -1579,14 +1569,12 @@ This analysis was generated using the Advanced Gene Expression Classification Pi
         
         with open('results/final_summary_report.html', 'w', encoding='utf-8') as f:
             f.write(html_content)
-        print("✅ HTML report saved to results/final_summary_report.html")
+        print(" HTML report saved to results/final_summary_report.html")
         
     except Exception as e:
-        print(f"⚠️ Could not create HTML version: {e}")
+        print(f" Could not create HTML version: {e}")
 
-# ============================================================================
 # MAIN EXECUTION FUNCTION - ENHANCED VERSION
-# ============================================================================
 
 def execute_advanced_analysis_pipeline(model_results_path='results/', 
                                        feature_set='X_var',
@@ -1598,8 +1586,7 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
     """Execute the complete enhanced advanced analysis pipeline"""
 
     print("=" * 80)
-    print("🚀 ADVANCED GENE EXPRESSION ANALYSIS PIPELINE v4.0")
-    print("📊 Class Balance → 🎯 Calibration → 📈 Validation → 🔍 Explainability → 📋 Reporting")
+    print(" ADVANCED GENE EXPRESSION ANALYSIS PIPELINE v4.0")
     print("=" * 80)
 
     start_time = datetime.now()
@@ -1609,7 +1596,7 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
 
     try:
         # Load and validate metadata
-        print("\n📁 Loading metadata and data splits...")
+        print("\n Loading metadata and data splits...")
         metadata_df = load_data_safely(metadata_path, "metadata")
         if metadata_df is None:
             raise FileNotFoundError(f"Cannot load metadata from {metadata_path}")
@@ -1635,7 +1622,7 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
                 raise FileNotFoundError(f"Cannot load {split_name} indices from {file_path}")
             indices[split_name] = list(dict.fromkeys(split_data['sample_id'].tolist()))
 
-        print(f"✅ Data validation completed:")
+        print(f"Data validation completed:")
         print(f"  Metadata: {metadata_df.shape[0]} samples, {metadata_df.shape[1]} features")
         print(f"  Condition column: '{condition_col}'")
         print(f"  Train indices: {len(indices['train'])}")
@@ -1647,7 +1634,7 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
         y_val = metadata_df.reindex(indices['val'])[condition_col].dropna()
         y_test = metadata_df.reindex(indices['test'])[condition_col].dropna()
 
-        print(f"\n📊 Label distributions:")
+        print(f"\n Label distributions:")
         print(f"  Train: {dict(y_train.value_counts())}")
         print(f"  Validation: {dict(y_val.value_counts())}")
         print(f"  Test: {dict(y_test.value_counts())}")
@@ -1678,13 +1665,13 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
         X_test = X_test.loc[list(common_test)]
         y_test = y_test.loc[list(common_test)]
 
-        print(f"✅ Sample alignment completed:")
+        print(f" Sample alignment completed:")
         print(f"  Final train samples: {len(X_train)}")
         print(f"  Final val samples: {len(X_val)}")
         print(f"  Final test samples: {len(X_test)}")
 
     except Exception as e:
-        print(f"❌ Error in data loading: {e}")
+        print(f" Error in data loading: {e}")
         return None
 
     # Initialize results dictionary
@@ -1695,12 +1682,12 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
         imbalance_stats = analyze_class_imbalance(y_train, y_val, y_test)
         results_dict['imbalance_stats'] = imbalance_stats
     except Exception as e:
-        print(f"❌ Error in class imbalance analysis: {e}")
+        print(f" Error in class imbalance analysis: {e}")
         imbalance_stats = None
 
     # Load trained model with multiple fallback options
     try:
-        print(f"\n🤖 Loading trained model...")
+        print(f"\n Loading trained model...")
         
         model_files = [
             f'{model_results_path}/baseline_random_forest.pkl',
@@ -1724,11 +1711,11 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
         if best_model is None:
             raise FileNotFoundError("No trained model found in any standard location")
             
-        print(f"✅ Model loaded successfully from: {model_file_used}")
+        print(f" Model loaded successfully from: {model_file_used}")
         
     except Exception as e:
-        print(f"❌ Failed to load model: {e}")
-        print("🔧 Please ensure your training pipeline (Steps 1-12) has completed successfully")
+        print(f" Failed to load model: {e}")
+        print(" Please ensure your training pipeline (Steps 1-12) has completed successfully")
         return None
 
     # Step 14: Model calibration
@@ -1742,14 +1729,14 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
         results_dict['calibration_metrics'] = calibration_metrics
         
     except Exception as e:
-        print(f"❌ Error in model calibration: {e}")
+        print(f" Error in model calibration: {e}")
         # Fallback to uncalibrated predictions
         try:
             y_proba_calibrated = best_model.predict_proba(X_test)[:, 1]
             calibration_metrics = {'brier_score': 0.25}  # Default value
             results_dict['calibration_metrics'] = calibration_metrics
         except:
-            print("❌ Cannot generate predictions from model")
+            print(" Cannot generate predictions from model")
             return None
 
     # Step 15: Statistical validation
@@ -1771,7 +1758,7 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
         }
         
     except Exception as e:
-        print(f"❌ Error in statistical validation: {e}")
+        print(f" Error in statistical validation: {e}")
         # Create minimal results
         results_dict['bootstrap_results'] = {}
         results_dict['permutation_results'] = {'p_value': 1.0, 'original_score': 0.5}
@@ -1796,7 +1783,7 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
                 break
         
         if scaler is None:
-            print("⚠️ Scaler not found; proceeding without scaling for SHAP")
+            print(" Scaler not found; proceeding without scaling for SHAP")
 
         # SHAP analysis
         shap_results = compute_shap_explanations(
@@ -1834,7 +1821,7 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
                 results_dict['pathway_results'] = pathway_results
         
     except Exception as e:
-        print(f"❌ Error in explainability analysis: {e}")
+        print(f" Error in explainability analysis: {e}")
         # Continue without explainability results
 
     print(f"Found {len(pathway_results) if pathway_results is not None else 0} enriched biological pathways")
@@ -1894,19 +1881,19 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
     print("🎉 ADVANCED ANALYSIS PIPELINE COMPLETED SUCCESSFULLY")
     print("=" * 80)
     
-    print(f"⏱️  Total execution time: {duration}")
-    print(f"📊 Analysis completed: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f" T otal execution time: {duration}")
+    print(f" Analysis completed: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     
-    print(f"\n✅ Successfully completed:")
-    print("   📈 Class imbalance analysis")
-    print("   🎯 Model probability calibration") 
-    print("   📊 Statistical validation (Bootstrap + Permutation)")
-    print("   🔍 Explainability analysis (SHAP)")
-    print("   🧬 Biological pathway enrichment")
-    print("   📋 Comprehensive reporting")
-    print("   📊 Publication-quality visualizations")
+    print(f"\n Successfully completed:")
+    print("    Class imbalance analysis")
+    print("    Model probability calibration") 
+    print("    Statistical validation (Bootstrap + Permutation)")
+    print("    Explainability analysis (SHAP)")
+    print("    Biological pathway enrichment")
+    print("    Comprehensive reporting")
+    print("    Publication-quality visualizations")
 
-    print(f"\n📁 Generated files:")
+    print(f"\n Generated files:")
     output_files = [
         "figs/comprehensive_results_figure.png",
         "figs/statistical_validation.png", 
@@ -1937,13 +1924,13 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
     model_summary = results_dict.get('model_summary', {})
     stat_summary = results_dict.get('statistical_summary', {})
     
-    print(f"   🎯 Test AUC: {model_summary.get('test_auc', 0):.3f}")
-    print(f"   ✅ Test Accuracy: {model_summary.get('test_accuracy', 0):.3f}")
-    print(f"   📊 Statistical Significance: {'Yes' if stat_summary.get('is_significant', False) else 'No'} (p={stat_summary.get('permutation_pvalue', 1):.4f})")
-    print(f"   🔬 Features Analyzed: {model_summary.get('n_features', 0):,}")
-    print(f"   🧬 Pathways Found: {len(pathway_results) if pathway_results is not None else 0}")
+    print(f"    Test AUC: {model_summary.get('test_auc', 0):.3f}")
+    print(f"    Test Accuracy: {model_summary.get('test_accuracy', 0):.3f}")
+    print(f"    Statistical Significance: {'Yes' if stat_summary.get('is_significant', False) else 'No'} (p={stat_summary.get('permutation_pvalue', 1):.4f})")
+    print(f"    Features Analyzed: {model_summary.get('n_features', 0):,}")
+    print(f"    Pathways Found: {len(pathway_results) if pathway_results is not None else 0}")
 
-    print(f"\n🚀 Ready for publication and further analysis!")
+    print(f"\n Ready for publication and further analysis!")
         # After you generate y_pred and y_proba_calibrated for X_test
     sample_table = pd.DataFrame({
         'Sample_ID': X_test.index,
@@ -1962,8 +1949,8 @@ def execute_advanced_analysis_pipeline(model_results_path='results/',
 # ============================================================================
 
 if __name__ == "__main__":
-    print("🔬 Advanced Gene Expression Analysis Pipeline v4.0 Loaded")
-    print("🚀 Loading features and executing complete analysis...")
+    print(" Advanced Gene Expression Analysis Pipeline v4.0 Loaded")
+    print(" Loading features and executing complete analysis...")
     
     try:
         # Load all feature matrices with error handling
@@ -1980,14 +1967,14 @@ if __name__ == "__main__":
             feature_data = load_data_safely(file_path, f"{feature_name} features")
             if feature_data is not None:
                 features_dict[feature_name] = feature_data
-                print(f"✅ Loaded {feature_name}: {feature_data.shape}")
+                print(f" Loaded {feature_name}: {feature_data.shape}")
             else:
-                print(f"⚠️ Could not load {feature_name} from {file_path}")
+                print(f" Could not load {feature_name} from {file_path}")
         
         if not features_dict:
             raise FileNotFoundError("No feature files could be loaded!")
         
-        print(f"\n📊 Available feature sets: {list(features_dict.keys())}")
+        print(f"\n Available feature sets: {list(features_dict.keys())}")
         
         # Execute the comprehensive analysis pipeline
         results = execute_advanced_analysis_pipeline(
@@ -1997,14 +1984,14 @@ if __name__ == "__main__":
         )
         
         if results:
-            print("\n🎉 PIPELINE EXECUTION SUCCESSFUL!")
-            print("📋 Check the generated reports and visualizations in 'results/' and 'figs/' folders")
+            print("\n PIPELINE EXECUTION SUCCESSFUL!")
+            print(" Check the generated reports and visualizations in 'results/' and 'figs/' folders")
         else:
-            print("\n❌ PIPELINE EXECUTION FAILED!")
-            print("🔧 Please check error messages above and ensure all required files are present")
+            print("\n PIPELINE EXECUTION FAILED!")
+            print(" Please check error messages above and ensure all required files are present")
             
     except Exception as e:
-        print(f"\n💥 CRITICAL ERROR: {e}")
-        print("🆘 Please check your data files and try again")
+        print(f"\n CRITICAL ERROR: {e}")
+        print(" Please check your data files and try again")
         import traceback
         traceback.print_exc()

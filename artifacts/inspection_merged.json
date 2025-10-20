@@ -1,0 +1,10 @@
+{
+  "n_genes": 123187,
+  "n_samples": 127,
+  "data_type": "raw counts",
+  "value_range": [
+    0.0,
+    80639.8
+  ],
+  "rna_type": "RNA"
+}
