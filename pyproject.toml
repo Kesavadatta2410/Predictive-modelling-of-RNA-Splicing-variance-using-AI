@@ -9,6 +9,7 @@ dependencies = [
     "captum>=0.7.0",
     "combat>=0.3.3",
     "gseapy>=1.1.10",
+    "imbalanced-learn>=0.14.0",
     "imblearn>=0.0",
     "inmoose>=0.8.1",
     "matplotlib>=3.10.6",

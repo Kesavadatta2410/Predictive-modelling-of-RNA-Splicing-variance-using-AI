@@ -833,6 +833,7 @@ def train_neural_model(splits, random_state=42):
         return None, 0.5, None
     
     torch.manual_seed(random_state)
+    nn_history = {'train_loss': [], 'val_auc': []}
     
     X_train = splits['X_train'].values
     X_val = splits['X_val'].values
@@ -902,6 +903,8 @@ def train_neural_model(splits, random_state=42):
         
         scheduler.step(val_auc)
         print(f"Epoch {epoch+1}: Train Loss={train_loss/len(train_loader):.4f}, Val AUC={val_auc:.4f}")
+        nn_history['train_loss'].append(train_loss/len(train_loader))
+        nn_history['val_auc'].append(val_auc)
         
         if val_auc > best_auc:
             best_auc = val_auc
@@ -918,7 +921,7 @@ def train_neural_model(splits, random_state=42):
     
     print(f"✓ Best NN Val AUC: {best_auc:.4f}")
     
-    return model, best_auc, scaler
+    return model, best_auc, scaler, nn_history
 
 # ============================================================================
 # STATISTICAL VALIDATION
@@ -1200,14 +1203,63 @@ def compute_shap_importance(model, X_train, X_test, y_train, feature_names=None,
         'refitted_model': model_for_shap
     }
 # Expanded dynamic mapping (based on top genes from your run + blood focus)
+# DYNAMIC_GENE_DISORDER_MAPPING = {
+#     'ENSG00000137959': {'symbol': 'IFI44L', 'disorders': ['SLE', 'MIS-C', 'Immunodeficiency'], 'blood_relevance': 0.8},
+#     'ENSG00000134184': {'symbol': 'GSTM1', 'disorders': ['Hemolytic Anemia', 'Oxidative Stress Disorders'], 'blood_relevance': 0.6},
+#     'ENSG00000137965': {'symbol': 'IFI44', 'disorders': ['MIS-C', 'Autoimmune Blood Inflammation'], 'blood_relevance': 0.7},
+#     'ENSG00000168765': {'symbol': 'GSTM4', 'disorders': ['Leukemia Risk', 'Sarcoma'], 'blood_relevance': 0.4},
+#     'ENSG00000187010': {'symbol': 'RHD', 'disorders': ['Hemolytic Anemia', 'Rh Incompatibility'], 'blood_relevance': 1.0},
+#     # Add more from annotations or API
+#     # e.g., 'ENSG00000121594': {'symbol': 'F8', 'disorders': ['Hemophilia'], 'blood_relevance': 1.0}
+# }
+# DYNAMIC_GENE_DISORDER_MAPPING
+# This dictionary links the highly influential ENSG features to specific blood/immune diseases.
+# 'blood_relevance' (0.0 to 1.0) is a weighting factor based on known biological function.
+
 DYNAMIC_GENE_DISORDER_MAPPING = {
-    'ENSG00000137959': {'symbol': 'IFI44L', 'disorders': ['SLE', 'MIS-C', 'Immunodeficiency'], 'blood_relevance': 0.8},
-    'ENSG00000134184': {'symbol': 'GSTM1', 'disorders': ['Hemolytic Anemia', 'Oxidative Stress Disorders'], 'blood_relevance': 0.6},
-    'ENSG00000137965': {'symbol': 'IFI44', 'disorders': ['MIS-C', 'Autoimmune Blood Inflammation'], 'blood_relevance': 0.7},
-    'ENSG00000168765': {'symbol': 'GSTM4', 'disorders': ['Leukemia Risk', 'Sarcoma'], 'blood_relevance': 0.4},
-    'ENSG00000187010': {'symbol': 'RHD', 'disorders': ['Hemolytic Anemia', 'Rh Incompatibility'], 'blood_relevance': 1.0},
-    # Add more from annotations or API
-    # e.g., 'ENSG00000121594': {'symbol': 'F8', 'disorders': ['Hemophilia'], 'blood_relevance': 1.0}
+    # --- TOP SHAP FEATURES (Immune/General Blood Dysfunction) ---
+
+    # 1. IFI44L (Interferon Induced Protein 44 Like) - Highest Importance. Strong Immune/Autoimmune link.
+    'ENSG00000137959': {'symbol': 'IFI44L', 'disorders': ['Systemic Lupus Erythematosus', 'Autoimmune Blood Inflammation', 'Viral Infection'], 'blood_relevance': 0.9},
+
+    # 2. GSTM1 (Glutathione S-Transferase Mu 1) - Detoxification/Oxidative Stress. Relevant in Red Blood Cell stress.
+    'ENSG00000134184': {'symbol': 'GSTM1', 'disorders': ['Oxidative Stress Disorders', 'Hemolytic Anemia Risk'], 'blood_relevance': 0.6},
+
+    # 3. IFI44 (Interferon Induced Protein 44) - Immune response, similar to IFI44L.
+    'ENSG00000137965': {'symbol': 'IFI44', 'disorders': ['Multisystem Inflammatory Syndrome', 'Autoimmune Disease', 'Hepatitis D'], 'blood_relevance': 0.85},
+
+    # 4. GSTM4 (Glutathione S-Transferase Mu 4) - Paralog of GSTM1, Detoxification.
+    'ENSG00000168765': {'symbol': 'GSTM4', 'disorders': ['Oxidative Stress Disorders', 'Leukemia Risk'], 'blood_relevance': 0.5},
+    
+    # 5. RHD (Rh Blood Group, D Antigen) - CRITICAL for blood typing/disorders. Directly linked to Rh Incompatibility/Hemolytic Disease.
+    'ENSG00000187010': {'symbol': 'RHD', 'disorders': ['Hemolytic Anemia', 'Rh Incompatibility', 'Platelet Disorders'], 'blood_relevance': 1.0},
+    
+    # 6. SDC4 (Syndecan 4) - Cell adhesion and migration. Relevant in blood cell trafficking/inflammation.
+    'ENSG00000273136': {'symbol': 'SDC4', 'disorders': ['Inflammatory Response', 'Thrombosis Risk', 'Vasculopathy'], 'blood_relevance': 0.4},
+    
+    # 7. C8orf82 (Gene Name: CCDC170 - Coiled-Coil Domain Containing 170) - Often linked to immune or signaling pathways.
+    'ENSG00000185842': {'symbol': 'CCDC170', 'disorders': ['Inflammatory Response', 'Unknown Genetic Disorder'], 'blood_relevance': 0.2},
+    
+    # 8. MYO1B (Myosin IB) - Cell motility/membrane trafficking, important in platelet function.
+    'ENSG00000169231': {'symbol': 'MYO1B', 'disorders': ['Platelet Disorders', 'Cell Motility Defects'], 'blood_relevance': 0.7},
+
+    # 9. GZMB (Granzyme B) - Major component of cytotoxic T-lymphocytes and Natural Killer cells. Highly relevant to immune cell activity.
+    'ENSG00000142669': {'symbol': 'GZMB', 'disorders': ['Lymphocyte Dysfunction', 'Hemophagocytic Lymphohistiocytosis (HLH)', 'Autoimmunity'], 'blood_relevance': 0.95},
+
+    # 10. DUSP10 (Dual Specificity Phosphatase 10) - Immune regulator, critical for T-cell activation.
+    'ENSG00000162627': {'symbol': 'DUSP10', 'disorders': ['Autoimmune Disease', 'Inflammatory Response'], 'blood_relevance': 0.8},
+    
+    # --- ESSENTIAL BLOOD DISORDER GENES (High Relevance, even if not Top 10 SHAP) ---
+    
+    # Hemophilia/VWD
+    'ENSG00000121594': {'symbol': 'F8', 'disorders': ['hemophilia'], 'blood_relevance': 1.0},
+    'ENSG00000169399': {'symbol': 'VWF', 'disorders': ['von_willebrand_disease'], 'blood_relevance': 1.0},
+
+    # Sickle Cell Disease/Thalassemia
+    'ENSG00000244734': {'symbol': 'HBB', 'disorders': ['sickle_cell_disease', 'thalassemia'], 'blood_relevance': 1.0},
+    
+    # Iron Refractory Anemia
+    'ENSG00000105374': {'symbol': 'TMPRSS6', 'disorders': ['iron_refractory_iron_deficiency_anemia'], 'blood_relevance': 1.0},
 }
 
 def load_dynamic_mapping():
@@ -1617,6 +1669,458 @@ def create_comprehensive_plots(results_dict):
         plt.close()
     
     print("✓ Perfect visualizations generated: Main dashboard + SHAP bar + Bubble chart (high-res PNGs)")
+
+
+def plot_baseline_model_comparison(baseline_results):
+    """
+    Plot comprehensive baseline model comparison
+    """
+    print("\n📊 Generating Baseline Model Comparison Plots...")
+    
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    
+    # Plot 1: Validation AUC Comparison
+    ax = axes[0, 0]
+    models = baseline_results['model'].values
+    val_aucs = baseline_results['val_auc'].values
+    colors = plt.cm.viridis(np.linspace(0, 1, len(models)))
+    
+    bars = ax.bar(range(len(models)), val_aucs, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5)
+    ax.set_xticks(range(len(models)))
+    ax.set_xticklabels(models, rotation=45, ha='right', fontsize=10)
+    ax.set_ylabel('Validation AUC', fontsize=12, fontweight='bold')
+    ax.set_title('Model Performance - Validation AUC', fontsize=14, fontweight='bold')
+    ax.axhline(y=0.5, color='r', linestyle='--', alpha=0.5, label='Random Baseline')
+    ax.grid(axis='y', alpha=0.3)
+    ax.legend()
+    
+    # Add value labels on bars
+    for i, (bar, val) in enumerate(zip(bars, val_aucs)):
+        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01, 
+                f'{val:.3f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
+    
+    # Plot 2: CV AUC with Error Bars
+    ax = axes[0, 1]
+    cv_means = baseline_results['cv_auc_mean'].values
+    cv_stds = baseline_results['cv_auc_std'].values
+    
+    ax.errorbar(range(len(models)), cv_means, yerr=cv_stds, 
+                fmt='o', markersize=10, capsize=8, capthick=2, 
+                color='darkblue', ecolor='red', alpha=0.8, linewidth=2)
+    ax.set_xticks(range(len(models)))
+    ax.set_xticklabels(models, rotation=45, ha='right', fontsize=10)
+    ax.set_ylabel('Cross-Validation AUC', fontsize=12, fontweight='bold')
+    ax.set_title('CV Performance with Standard Deviation', fontsize=14, fontweight='bold')
+    ax.grid(alpha=0.3)
+    
+    # Plot 3: Multi-Metric Comparison (Accuracy, F1, AUC)
+    ax = axes[1, 0]
+    metrics = ['val_accuracy', 'val_f1', 'val_auc']
+    x = np.arange(len(models))
+    width = 0.25
+    
+    for i, metric in enumerate(metrics):
+        values = baseline_results[metric].values
+        ax.bar(x + i*width, values, width, label=metric.replace('val_', '').upper(), alpha=0.8)
+    
+    ax.set_xticks(x + width)
+    ax.set_xticklabels(models, rotation=45, ha='right', fontsize=10)
+    ax.set_ylabel('Score', fontsize=12, fontweight='bold')
+    ax.set_title('Multi-Metric Model Comparison', fontsize=14, fontweight='bold')
+    ax.legend(fontsize=10)
+    ax.grid(axis='y', alpha=0.3)
+    
+    # Plot 4: Model Ranking Table
+    ax = axes[1, 1]
+    ax.axis('tight')
+    ax.axis('off')
+    
+    table_data = baseline_results[['model', 'val_auc', 'val_accuracy', 'val_f1']].copy()
+    table_data.columns = ['Model', 'Val AUC', 'Val Acc', 'Val F1']
+    table_data = table_data.round(3)
+    
+    table = ax.table(cellText=table_data.values, colLabels=table_data.columns,
+                     cellLoc='center', loc='center', 
+                     colColours=['#4CAF50']*4,
+                     cellColours=[['#f0f0f0']*4]*len(table_data))
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1, 2)
+    ax.set_title('Model Performance Summary', fontsize=14, fontweight='bold', pad=20)
+    
+    plt.tight_layout()
+    plt.savefig('figs/baseline_model_comparison.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print("✅ Saved: figs/baseline_model_comparison.png")
+
+
+def plot_neural_network_training(nn_history):
+    """
+    Plot neural network training history (loss over epochs)
+    NOTE: You need to modify train_neural_model() to return history dict
+    """
+    print("\n📊 Generating Neural Network Training Plots...")
+    
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # Plot 1: Training Loss
+    ax = axes[0]
+    epochs = range(1, len(nn_history['train_loss']) + 1)
+    ax.plot(epochs, nn_history['train_loss'], 'b-o', label='Training Loss', linewidth=2, markersize=4)
+    ax.set_xlabel('Epoch', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Loss (BCE)', fontsize=12, fontweight='bold')
+    ax.set_title('Neural Network - Training Loss Over Epochs', fontsize=14, fontweight='bold')
+    ax.grid(alpha=0.3)
+    ax.legend(fontsize=11)
+    
+    # Plot 2: Validation AUC
+    ax = axes[1]
+    ax.plot(epochs, nn_history['val_auc'], 'r-o', label='Validation AUC', linewidth=2, markersize=4)
+    ax.axhline(y=max(nn_history['val_auc']), color='g', linestyle='--', 
+               label=f"Best AUC: {max(nn_history['val_auc']):.4f}", alpha=0.7)
+    ax.set_xlabel('Epoch', fontsize=12, fontweight='bold')
+    ax.set_ylabel('AUC Score', fontsize=12, fontweight='bold')
+    ax.set_title('Neural Network - Validation AUC Over Epochs', fontsize=14, fontweight='bold')
+    ax.grid(alpha=0.3)
+    ax.legend(fontsize=11)
+    
+    plt.tight_layout()
+    plt.savefig('figs/neural_network_training.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print("✅ Saved: figs/neural_network_training.png")
+
+
+def plot_test_results_comprehensive(y_true, y_pred, y_proba):
+    """
+    Comprehensive test results visualization
+    """
+    print("\n📊 Generating Comprehensive Test Results Plots...")
+    
+    fig = plt.figure(figsize=(20, 12))
+    
+    # Plot 1: ROC Curve
+    ax1 = plt.subplot(2, 3, 1)
+    fpr, tpr, thresholds = roc_curve(y_true, y_proba)
+    from sklearn.metrics import roc_auc_score
+    auc_score = roc_auc_score(y_true, y_proba)
+    
+    ax1.plot(fpr, tpr, 'b-', linewidth=3, label=f'Model (AUC = {auc_score:.4f})')
+    ax1.plot([0, 1], [0, 1], 'r--', linewidth=2, label='Random (AUC = 0.5)', alpha=0.5)
+    ax1.fill_between(fpr, tpr, alpha=0.3)
+    ax1.set_xlabel('False Positive Rate', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('True Positive Rate', fontsize=12, fontweight='bold')
+    ax1.set_title('ROC Curve - Test Set', fontsize=14, fontweight='bold')
+    ax1.legend(fontsize=10)
+    ax1.grid(alpha=0.3)
+    
+    # Plot 2: Precision-Recall Curve
+    ax2 = plt.subplot(2, 3, 2)
+    precision, recall, _ = precision_recall_curve(y_true, y_proba)
+    
+    ax2.plot(recall, precision, 'g-', linewidth=3, label='PR Curve')
+    ax2.fill_between(recall, precision, alpha=0.3, color='green')
+    ax2.set_xlabel('Recall', fontsize=12, fontweight='bold')
+    ax2.set_ylabel('Precision', fontsize=12, fontweight='bold')
+    ax2.set_title('Precision-Recall Curve', fontsize=14, fontweight='bold')
+    ax2.legend(fontsize=10)
+    ax2.grid(alpha=0.3)
+    
+    # Plot 3: Confusion Matrix
+    ax3 = plt.subplot(2, 3, 3)
+    cm = confusion_matrix(y_true, y_pred)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=True, 
+                square=True, linewidths=2, ax=ax3,
+                annot_kws={'fontsize': 14, 'fontweight': 'bold'})
+    ax3.set_xlabel('Predicted Label', fontsize=12, fontweight='bold')
+    ax3.set_ylabel('True Label', fontsize=12, fontweight='bold')
+    ax3.set_title('Confusion Matrix', fontsize=14, fontweight='bold')
+    ax3.set_xticklabels(['Healthy', 'Disease'])
+    ax3.set_yticklabels(['Healthy', 'Disease'])
+    
+    # Plot 4: Risk Score Distribution
+    ax4 = plt.subplot(2, 3, 4)
+    ax4.hist(y_proba[y_true == 0], bins=30, alpha=0.7, label='Healthy', color='blue', edgecolor='black')
+    ax4.hist(y_proba[y_true == 1], bins=30, alpha=0.7, label='Disease', color='red', edgecolor='black')
+    ax4.axvline(x=0.5, color='green', linestyle='--', linewidth=2, label='Threshold')
+    ax4.set_xlabel('Risk Score', fontsize=12, fontweight='bold')
+    ax4.set_ylabel('Frequency', fontsize=12, fontweight='bold')
+    ax4.set_title('Risk Score Distribution by True Label', fontsize=14, fontweight='bold')
+    ax4.legend(fontsize=10)
+    ax4.grid(alpha=0.3)
+    
+    # Plot 5: Classification Threshold Analysis
+    ax5 = plt.subplot(2, 3, 5)
+    thresholds_range = np.linspace(0, 1, 100)
+    accuracies = []
+    f1_scores = []
+    
+    from sklearn.metrics import accuracy_score, f1_score
+    for thresh in thresholds_range:
+        y_pred_thresh = (y_proba >= thresh).astype(int)
+        accuracies.append(accuracy_score(y_true, y_pred_thresh))
+        f1_scores.append(f1_score(y_true, y_pred_thresh, average='weighted'))
+    
+    ax5.plot(thresholds_range, accuracies, 'b-', linewidth=2, label='Accuracy')
+    ax5.plot(thresholds_range, f1_scores, 'r-', linewidth=2, label='F1-Score')
+    ax5.axvline(x=0.5, color='green', linestyle='--', linewidth=2, alpha=0.5)
+    ax5.set_xlabel('Threshold', fontsize=12, fontweight='bold')
+    ax5.set_ylabel('Score', fontsize=12, fontweight='bold')
+    ax5.set_title('Metrics vs Classification Threshold', fontsize=14, fontweight='bold')
+    ax5.legend(fontsize=10)
+    ax5.grid(alpha=0.3)
+    
+    # Plot 6: Metrics Summary Table
+    ax6 = plt.subplot(2, 3, 6)
+    ax6.axis('tight')
+    ax6.axis('off')
+    
+    from sklearn.metrics import precision_score, recall_score
+    metrics_data = [
+        ['Metric', 'Score'],
+        ['AUC', f'{auc_score:.4f}'],
+        ['Accuracy', f'{accuracy_score(y_true, y_pred):.4f}'],
+        ['Precision', f'{precision_score(y_true, y_pred, average="weighted"):.4f}'],
+        ['Recall', f'{recall_score(y_true, y_pred, average="weighted"):.4f}'],
+        ['F1-Score', f'{f1_score(y_true, y_pred, average="weighted"):.4f}']
+    ]
+    
+    table = ax6.table(cellText=metrics_data, cellLoc='center', loc='center',
+                      colColours=['#4CAF50', '#4CAF50'],
+                      cellColours=[['#f0f0f0', '#f0f0f0']]*len(metrics_data))
+    table.auto_set_font_size(False)
+    table.set_fontsize(11)
+    table.scale(1, 2.5)
+    ax6.set_title('Test Set Performance Metrics', fontsize=14, fontweight='bold', pad=20)
+    
+    plt.tight_layout()
+    plt.savefig('figs/test_results_comprehensive.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print("✅ Saved: figs/test_results_comprehensive.png")
+
+
+def plot_shap_analysis_detailed(shap_importance_df, shap_values, X_test, top_n=20):
+    """
+    Detailed SHAP analysis plots
+    """
+    print("\n📊 Generating Detailed SHAP Analysis Plots...")
+    
+    fig = plt.figure(figsize=(20, 12))
+    
+    # Plot 1: Top Features Bar Plot
+    ax1 = plt.subplot(2, 2, 1)
+    top_features = shap_importance_df.head(top_n)
+    colors = plt.cm.RdYlGn(np.linspace(0.3, 0.9, len(top_features)))
+    
+    y_pos = np.arange(len(top_features))
+    bars = ax1.barh(y_pos, top_features['importance'], color=colors, alpha=0.8, edgecolor='black')
+    ax1.set_yticks(y_pos)
+    ax1.set_yticklabels([f[:30] for f in top_features['feature']], fontsize=9)
+    ax1.set_xlabel('SHAP Importance (Mean |SHAP value|)', fontsize=12, fontweight='bold')
+    ax1.set_title(f'Top {top_n} Most Important Features (SHAP)', fontsize=14, fontweight='bold')
+    ax1.invert_yaxis()
+    ax1.grid(axis='x', alpha=0.3)
+    
+    # Add value labels
+    for i, (bar, val) in enumerate(zip(bars, top_features['importance'])):
+        ax1.text(val + 0.001, bar.get_y() + bar.get_height()/2, 
+                f'{val:.4f}', va='center', fontsize=8)
+    
+    # Plot 2: Cumulative Importance
+    ax2 = plt.subplot(2, 2, 2)
+    importance_sorted = shap_importance_df.sort_values('importance', ascending=False)
+    cumsum = np.cumsum(importance_sorted['importance']) / importance_sorted['importance'].sum() * 100
+    
+    ax2.plot(range(len(cumsum)), cumsum, 'b-', linewidth=3)
+    ax2.axhline(y=80, color='r', linestyle='--', linewidth=2, label='80% Threshold', alpha=0.7)
+    ax2.axhline(y=90, color='orange', linestyle='--', linewidth=2, label='90% Threshold', alpha=0.7)
+    ax2.fill_between(range(len(cumsum)), cumsum, alpha=0.3)
+    ax2.set_xlabel('Number of Features', fontsize=12, fontweight='bold')
+    ax2.set_ylabel('Cumulative Importance (%)', fontsize=12, fontweight='bold')
+    ax2.set_title('Cumulative Feature Importance', fontsize=14, fontweight='bold')
+    ax2.legend(fontsize=10)
+    ax2.grid(alpha=0.3)
+    
+    # Find features for 80% and 90%
+    n_80 = np.argmax(cumsum >= 80) + 1
+    n_90 = np.argmax(cumsum >= 90) + 1
+    ax2.scatter([n_80, n_90], [80, 90], s=100, c=['red', 'orange'], zorder=5)
+    ax2.text(n_80, 82, f'{n_80} features', ha='center', fontsize=9, fontweight='bold')
+    ax2.text(n_90, 92, f'{n_90} features', ha='center', fontsize=9, fontweight='bold')
+    
+    # Plot 3: SHAP Values Heatmap (Top 20 features, sample subset)
+    ax3 = plt.subplot(2, 2, 3)
+    top_feature_names = top_features['feature'].head(20).tolist()
+    
+    # Find indices of top features in X_test
+    feature_indices = [list(X_test.columns).index(f) for f in top_feature_names if f in X_test.columns]
+    
+    if len(feature_indices) > 0 and shap_values is not None:
+        shap_subset = shap_values[:min(50, shap_values.shape[0]), feature_indices]
+        
+        sns.heatmap(shap_subset.T, cmap='RdBu_r', center=0, 
+                    cbar_kws={'label': 'SHAP Value'}, ax=ax3,
+                    yticklabels=[f[:25] for f in [top_feature_names[i] for i in range(len(feature_indices))]],
+                    xticklabels=False)
+        ax3.set_xlabel('Samples', fontsize=12, fontweight='bold')
+        ax3.set_ylabel('Features', fontsize=12, fontweight='bold')
+        ax3.set_title('SHAP Values Heatmap (Top 20 Features)', fontsize=14, fontweight='bold')
+    
+    # Plot 4: Feature Importance Distribution
+    ax4 = plt.subplot(2, 2, 4)
+    ax4.hist(shap_importance_df['importance'], bins=50, alpha=0.7, 
+             color='steelblue', edgecolor='black')
+    ax4.axvline(x=shap_importance_df['importance'].median(), color='r', 
+                linestyle='--', linewidth=2, label=f"Median: {shap_importance_df['importance'].median():.4f}")
+    ax4.set_xlabel('SHAP Importance', fontsize=12, fontweight='bold')
+    ax4.set_ylabel('Number of Features', fontsize=12, fontweight='bold')
+    ax4.set_title('Distribution of Feature Importance', fontsize=14, fontweight='bold')
+    ax4.legend(fontsize=10)
+    ax4.grid(alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig('figs/shap_analysis_detailed.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print("✅ Saved: figs/shap_analysis_detailed.png")
+
+
+def plot_disease_predictions_detailed(disease_predictions_df, disease_targets):
+    """
+    Detailed disease prediction visualizations
+    """
+    print("\n📊 Generating Disease Predictions Plots...")
+    
+    # Find probability columns
+    prob_cols = [col for col in disease_predictions_df.columns if col.endswith('_probability')]
+    
+    if not prob_cols:
+        print("⚠️ No disease probability columns found")
+        return
+    
+    fig = plt.figure(figsize=(20, 12))
+    
+    # Plot 1: Disease Risk Heatmap
+    ax1 = plt.subplot(2, 2, 1)
+    risk_data = disease_predictions_df[prob_cols].values
+    
+    im = ax1.imshow(risk_data, cmap='YlOrRd', aspect='auto', vmin=0, vmax=1)
+    ax1.set_xlabel('Disease Type', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('Sample ID', fontsize=12, fontweight='bold')
+    ax1.set_title('Disease Risk Heatmap (All Samples)', fontsize=14, fontweight='bold')
+    ax1.set_xticks(range(len(prob_cols)))
+    ax1.set_xticklabels([col.replace('_probability', '').replace('_', ' ')[:20] 
+                         for col in prob_cols], rotation=45, ha='right', fontsize=9)
+    cbar = plt.colorbar(im, ax=ax1)
+    cbar.set_label('Risk Probability', fontsize=11, fontweight='bold')
+    
+    # Plot 2: Average Risk per Disease
+    ax2 = plt.subplot(2, 2, 2)
+    mean_risks = disease_predictions_df[prob_cols].mean()
+    std_risks = disease_predictions_df[prob_cols].std()
+    
+    colors = plt.cm.plasma(np.linspace(0, 1, len(mean_risks)))
+    bars = ax2.bar(range(len(mean_risks)), mean_risks, yerr=std_risks, 
+                   color=colors, alpha=0.8, edgecolor='black', capsize=5)
+    ax2.set_xticks(range(len(mean_risks)))
+    ax2.set_xticklabels([col.replace('_probability', '').replace('_', ' ')[:20] 
+                         for col in prob_cols], rotation=45, ha='right', fontsize=9)
+    ax2.set_ylabel('Mean Risk Probability', fontsize=12, fontweight='bold')
+    ax2.set_title('Average Disease Risk Across All Samples', fontsize=14, fontweight='bold')
+    ax2.grid(axis='y', alpha=0.3)
+    
+    # Add value labels
+    for bar, val in zip(bars, mean_risks):
+        ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+                f'{val:.3f}', ha='center', va='bottom', fontsize=8, fontweight='bold')
+    
+    # Plot 3: High Risk Sample Count
+    ax3 = plt.subplot(2, 2, 3)
+    high_risk_counts = (disease_predictions_df[prob_cols] > 0.5).sum()
+    
+    colors = plt.cm.Reds(np.linspace(0.3, 0.9, len(high_risk_counts)))
+    bars = ax3.barh(range(len(high_risk_counts)), high_risk_counts, 
+                    color=colors, alpha=0.8, edgecolor='black')
+    ax3.set_yticks(range(len(high_risk_counts)))
+    ax3.set_yticklabels([col.replace('_probability', '').replace('_', ' ')[:25] 
+                         for col in prob_cols], fontsize=9)
+    ax3.set_xlabel('Number of High Risk Samples (>0.5)', fontsize=12, fontweight='bold')
+    ax3.set_title('High Risk Sample Count per Disease', fontsize=14, fontweight='bold')
+    ax3.invert_yaxis()
+    ax3.grid(axis='x', alpha=0.3)
+    
+    # Add value labels
+    for bar, val in zip(bars, high_risk_counts):
+        ax3.text(val + 0.5, bar.get_y() + bar.get_height()/2,
+                str(int(val)), va='center', fontsize=9, fontweight='bold')
+    
+    # Plot 4: Risk Distribution Violin Plot
+    ax4 = plt.subplot(2, 2, 4)
+    risk_data_list = [disease_predictions_df[col].values for col in prob_cols]
+    labels = [col.replace('_probability', '').replace('_', ' ')[:15] for col in prob_cols]
+    
+    parts = ax4.violinplot(risk_data_list, positions=range(len(prob_cols)), 
+                           showmeans=True, showmedians=True)
+    ax4.set_xticks(range(len(prob_cols)))
+    ax4.set_xticklabels(labels, rotation=45, ha='right', fontsize=9)
+    ax4.set_ylabel('Risk Probability', fontsize=12, fontweight='bold')
+    ax4.set_title('Risk Distribution per Disease (Violin Plot)', fontsize=14, fontweight='bold')
+    ax4.grid(axis='y', alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig('figs/disease_predictions_detailed.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print("✅ Saved: figs/disease_predictions_detailed.png")
+
+
+# ============================================================================
+# MASTER VISUALIZATION FUNCTION - CALL THIS AT THE END
+# ============================================================================
+
+def generate_all_visualizations(results_dict, nn_history=None):
+    """
+    Generate all visualization plots
+    
+    Args:
+        results_dict: Dictionary with all results from pipeline
+        nn_history: Optional dict with 'train_loss' and 'val_auc' lists from NN training
+    """
+    print("\n" + "="*80)
+    print("🎨 GENERATING ALL VISUALIZATIONS")
+    print("="*80)
+    
+    # 1. Baseline Model Comparison
+    if 'baseline_results' in results_dict:
+        plot_baseline_model_comparison(results_dict['baseline_results'])
+    
+    # 2. Neural Network Training (if history provided)
+    if nn_history is not None:
+        plot_neural_network_training(nn_history)
+    else:
+        print("⚠️ Neural network training history not provided - skipping NN plots")
+    
+    # 3. Test Results
+    if 'test_predictions' in results_dict:
+        pred = results_dict['test_predictions']
+        plot_test_results_comprehensive(pred['y_true'], pred['y_pred'], pred['y_proba'])
+    
+    # 4. SHAP Analysis
+    if 'shap_importance' in results_dict and results_dict['shap_importance'] is not None:
+        shap_res = results_dict['shap_importance']
+        X_test = results_dict.get('X_test', None)  # Need to pass X_test in results_dict
+        plot_shap_analysis_detailed(
+            shap_res['importance_df'], 
+            shap_res.get('shap_values'), 
+            X_test if X_test is not None else pd.DataFrame()
+        )
+    
+    # 5. Disease Predictions
+    if 'disease_predictions' in results_dict and results_dict['disease_predictions'] is not None:
+        plot_disease_predictions_detailed(
+            results_dict['disease_predictions'],
+            DISEASE_TARGETS
+        )
+    
+    print("\n✅ All visualizations generated successfully!")
+    print("📁 Check the 'figs/' directory for all plots")
 # ============================================================================
 # RESULT EXPORT & REPORT
 # ============================================================================
@@ -1863,7 +2367,8 @@ def run_complete_pipeline(expression_files=EXPRESSION_FILES, metadata_file='meta
     results_dict['baseline_results'] = baseline_results
     
     # Train NN
-    nn_model, nn_auc, nn_scaler = train_neural_model(splits, random_state)
+    nn_model, nn_auc, nn_scaler, nn_history = train_neural_model(splits, random_state)
+    results_dict['nn_history'] = nn_history
     if nn_model:
         # Compare and possibly set as best
         if nn_auc > baseline_results.iloc[0]['val_auc']:
@@ -1911,7 +2416,8 @@ def run_complete_pipeline(expression_files=EXPRESSION_FILES, metadata_file='meta
     results_dict['test_predictions'] = {
         'y_true': y_test,
         'y_pred': y_pred,
-        'y_proba': y_proba
+        'y_proba': y_proba,
+        'X_test': X_test
     }
     
     # Save predictions
@@ -1972,6 +2478,7 @@ def run_complete_pipeline(expression_files=EXPRESSION_FILES, metadata_file='meta
     
     # Step 15: Visualizations
     create_comprehensive_plots(results_dict)
+    generate_all_visualizations(results_dict, nn_history=results_dict.get('nn_history'))
     
     # Step 16: Final report
     final_report = create_final_report(results_dict)
@@ -2004,7 +2511,7 @@ def run_complete_pipeline(expression_files=EXPRESSION_FILES, metadata_file='meta
 if __name__ == "__main__":
     print("""
     ╔════════════════════════════════════════════════════════════════════╗
-    ║  Enhanced Gene Expression Pipeline v5.1                           ║
+    ║  Enhanced Gene Expression Pipeline v5.1                            ║
     ║  Multi-Dataset + Splicing + NN + XAI                               ║
     ╚════════════════════════════════════════════════════════════════════╝
     """)

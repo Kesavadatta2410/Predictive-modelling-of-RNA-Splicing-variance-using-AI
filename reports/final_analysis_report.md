@@ -1,6 +1,6 @@
 # Gene Expression Analysis - Complete Report
 
-**Generated**: 2025-10-20 10:55:57  
+**Generated**: 2025-10-23 06:51:46  
 **Pipeline Version**: 5.1 - Multi-Dataset + Splicing + NN
 
 ---
@@ -42,6 +42,20 @@
 
 Top associations (SHAP-based % contribution):
 
+
+#### Von Willebrand Disease
+
+| Gene | % Contribution | SHAP Importance | Rank |
+|------|----------------|-----------------|------|
+| IFI44 | 26.00% | 0.3729 | 113 |
+| IFI44 | 26.00% | 0.3729 | 113 |
+| DUSP10 | 7.97% | 0.1214 | 478 |
+
+#### Sickle Cell Disease
+
+| Gene | % Contribution | SHAP Importance | Rank |
+|------|----------------|-----------------|------|
+| MYO1B | 9.21% | 0.1603 | 491 |
 
 
 ## Model Evaluation Metrics (95% CI)
